@@ -35,18 +35,23 @@ class ResidualBlock(nn.Module):
         """
         super().__init__() 
 
-        # number of layers is customisable
+        # number of layers is customisable. this is to build the residual layer path
         layers = []
 
         # Inner convolutions: input channels to number of hidden channels 
-        for layer in range(depth):
-            layers.append(nn.Conv2d(datach, nbch2, kernel_size=1, padding=0))
+        # First inner convolution:
+        layers.append(nn.Conv2d(datach, nbch2, kernel_size=1, padding=0))
+        layers.append(nn.ReLU(inplace=True))
+
+        # Next inner convolutions when depth > 1
+        for layer in range(1, depth):
+            layers.append(nn.Conv2d(nbch2, nbch2, kernel_size=1, padding=0))
             layers.append(nn.ReLU(inplace=True))
 
         # Outer convolution: back to the size of input channels 
         layers.append(nn.Conv2d(nbch2, datach, kernel_size=1, padding=0))
 
-        # add sequence of layers 
+        # register all layers
         self.residual_layers = nn.Sequential(*layers) 
         
     def forward(self, x):
