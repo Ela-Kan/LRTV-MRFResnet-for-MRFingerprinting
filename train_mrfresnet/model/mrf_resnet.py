@@ -92,7 +92,7 @@ class MRFResnetEncoder(nn.Module):
         self.relus = nn.ModuleList()
 
         # residual blocks
-        for resBlock in range(depth_out): # creating the residual blocks in diagram
+        for resBlock in range(depth_out): # creating the N residual blocks 
             self.residual_blocks.append(ResidualBlock(datach, hidden_size, depth_int))
             self.relus.append(nn.ReLU(inplace=True))
 
@@ -117,7 +117,7 @@ class MRFResnetEncoder(nn.Module):
 
         # regression layer
         out = self.conv_out(x)
-        out = self.relu_out(x)
+        out = self.relu_out(out)
 
         return out
     
