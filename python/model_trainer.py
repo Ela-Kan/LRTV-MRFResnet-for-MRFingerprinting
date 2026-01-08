@@ -18,12 +18,52 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import TensorDataset, DataLoader
 import numpy as np
+import os
+from datetime import datetime
+
 
 from model.mrf_resnet import MRFResnetEncoder, MRFResnetDecoder
 
-def train_model(train_x, train_y, modelname, device = 'cpu', verbose = True):
+def save_network(network, epoch, model_name, verbose= True, timestamp = None, save_dir = './trained_models'):
     """
-    Train either Encoder or Decoder network. Matches model_trainer.m in matlab
+    Saves model checkpoint at periodic intervals. Allows for retrieving prior models in case of
+    overfitting.
+    
+    
+    Based on https://niruhanv.medium.com/periodically-save-trained-neural-network-models-in-pytorch-f0837cc867e7
+    
+    Parameters:
+    -----------
+        network : nn.Module
+            Model to save
+        epoch : int
+            Current epoch number
+        model_name : str
+            'Encoder' or 'Decoder'
+        verbose : bool optional
+            Print training progress
+        timestamp : str
+            Timestamp for checkpoint/model name (essentially an ID)
+        save_dir : str
+            Where to save the checkpoint
+    
+        
+    """
+    save_checkpoint_dir = f'{save_dir}/checkpoints'
+    os.makedirs(save_checkpoint_dir, exist_ok=True)
+    if timestamp is None:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+    save_filename = f"{model_name}_{timestamp}_epoch_{epoch}.pth"
+    checkpoint_path = os.path.join(save_checkpoint_dir,save_filename)
+    torch.save(network.state_dict(), checkpoint_path)
+    if verbose:
+        print(f"Saved {model_name} model at checkpoint: {checkpoint_path}")
+
+def train_model(train_x, train_y, modelname, device = 'cpu', verbose = True, checkpoint_interval=10):
+    """
+    Train either Encoder or Decoder network. Matches model_trainer.m in matlab.
+    Has checkpoint saving of models.
     
     Parameters:
     -----------
@@ -37,13 +77,17 @@ def train_model(train_x, train_y, modelname, device = 'cpu', verbose = True):
             'cpu' or 'cuda' or 'mps'
         verbose : bool optional
             Print training progress
+        checkpoint_interval : int optional
+            Save checkpoint every N epochs 
     
     Returns:
     --------
         model : nn.Module
             Trained model
         training_history : dict
-            Loss history
+            Loss and learning rate history over epochs
+        checkpoint_timestamp : str
+            Time of first checkpoint, used as an ID for models
     """
     
     # convert training data to tensors if necessary
@@ -69,7 +113,7 @@ def train_model(train_x, train_y, modelname, device = 'cpu', verbose = True):
         print("Training MRFResnet Encoder")
         print("=" * 50)
 
-        #TODO: allow flexibility for more output parameters
+        #TODO: allow flexibility for more output parameters and model changes
         model = MRFResnetEncoder(
             datach=input_dim,          # Compressed fingerprint size
             hidden_size=10,     # Hidden channels in residual blocks (nbch2)
@@ -78,7 +122,7 @@ def train_model(train_x, train_y, modelname, device = 'cpu', verbose = True):
             num_params=output_dim        # Output: T1, T2
         ).to(device)
 
-        max_epochs = 50
+        max_epochs = 50 # 20 in paper
         batch_size = 100
         learning_rate = 0.01
         lr_decay_factor = 0.8
@@ -100,7 +144,7 @@ def train_model(train_x, train_y, modelname, device = 'cpu', verbose = True):
         ).to(device)
 
         
-        max_epochs = 100
+        max_epochs = 100 # 20 in paper
         batch_size = 20
         learning_rate = 0.01
         lr_decay_factor = 0.95
@@ -110,7 +154,7 @@ def train_model(train_x, train_y, modelname, device = 'cpu', verbose = True):
         shuffle = True
 
     else:
-       raise ValueError(f"Model: {modelname} does not exist. Check models.'")
+       raise ValueError(f"Model: {modelname} does not exist. Check models.")
 
     # Set up optimiser and loss function
     optimizer = optim.Adam(model.parameters(), 
@@ -133,11 +177,14 @@ def train_model(train_x, train_y, modelname, device = 'cpu', verbose = True):
     # Training loop
 
     # for tracking training
-    training_history = {'loss' : [],
+    training_history = {'model' : modelname,
+                        'loss' : [],
                         'epoch' : [],
                         'lr' : []}
     
     model.train()
+
+    checkpoint_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
     for epoch in range(max_epochs):
         running_loss  = 0.0
@@ -148,12 +195,15 @@ def train_model(train_x, train_y, modelname, device = 'cpu', verbose = True):
             # Forward pass
             predictions = model(batch_x)
             loss = loss_function(predictions, batch_y)
+
+            # Weighted avg loss per epoch. (https://discuss.pytorch.org/t/plotting-loss-curve/42632/4)
+            running_loss += loss.item() * batch_x.size(0)
+
             # Backward pass
             loss.backward()
             optimizer.step()
 
-        # Weighted avg loss per epoch. (https://discuss.pytorch.org/t/plotting-loss-curve/42632/4)
-        running_loss += loss.item() * batch_x.size(0)
+        # average loss for the epoch
         epoch_loss = running_loss / len(dataset)
         current_lr = optimizer.param_groups[0]['lr']
 
@@ -164,10 +214,14 @@ def train_model(train_x, train_y, modelname, device = 'cpu', verbose = True):
         # step learning rate scheduler
         lr_scheduler.step()
 
+        # periodic saving checkpoint for model
+        if (epoch + 1) % checkpoint_interval == 0:
+            save_network(model, epoch+1, modelname, verbose, checkpoint_timestamp)
+
         if verbose and (epoch + 1) % max(1, max_epochs // 10) == 0:
             print(f"Epoch [{epoch+1:3d}/{max_epochs}], Loss: {epoch_loss:.6f}, LR: {current_lr:.6f}")
 
     if verbose:
         print(f"\nFinal loss: {training_history['loss'][-1]:.6f}\n")
 
-    return model, training_history
+    return model, training_history, checkpoint_timestamp
