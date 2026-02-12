@@ -61,13 +61,17 @@ def print_training_summary(model_training_info):
     print("=" * 50)
 
     epochs = model_training_info['epoch']
-    train_loss = model_training_info['loss']
+    train_loss = model_training_info['train_loss']
+    val_loss = model_training_info['val_loss']
     
     
     print(f"Total epochs: {len(epochs)}")
-    print(f"Initial loss: {train_loss[0]:.6f}")
-    print(f"Final loss: {train_loss[-1]:.6f}")
-    print(f"Best loss: {min(train_loss):.6f} (epoch {np.argmin(train_loss)+1:.0f})")
+    print(f"Initial Train loss: {train_loss[0]:.6f}")
+    print(f"Final Train loss: {train_loss[-1]:.6f}")
+    print(f"Best Train loss: {min(train_loss):.6f} (epoch {np.argmin(train_loss)+1:.0f})")
+    print(f"Initial Validation loss: {val_loss[0]:.6f}")
+    print(f"Final Validation loss: {val_loss[-1]:.6f}")
+    print(f"Best Validation loss: {min(val_loss):.6f} (epoch {np.argmin(val_loss)+1:.0f})")
 
 
     return None
@@ -92,24 +96,34 @@ def plot_training_curves(model_training_info, model_ID, save_dir = './trained_mo
     """
     model_type = model_training_info['model']
 
-    fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+    fig, axes = plt.subplots(1, 3, figsize=(14, 5))
     fig.suptitle(f'{model_type} Training Curves', fontsize=style_params['suplabel_font_size'], fontweight='bold', y=1.00)
 
-    axes[0].plot(model_training_info['epoch'], model_training_info['loss'], color = colors[0])
+    axes[0].plot(model_training_info['epoch'], model_training_info['train_loss'], color = colors[0])
     axes[0].set_xlabel('Epoch', fontsize=style_params['label_fontsize'])
-    axes[0].set_ylabel('Loss (MSE)', fontsize=style_params['label_fontsize'])
+    axes[0].set_ylabel('Training Loss (MSE)', fontsize=style_params['label_fontsize'])
     axes[0].grid(True, alpha=0.3, linestyle='--')
     axes[0].set_yscale('log')
     axes[0].spines['top'].set_visible(False)
     axes[0].spines['right'].set_visible(False)
 
-    axes[1].plot(model_training_info['epoch'], model_training_info['lr'], color = colors[1])
+    axes[1].plot(model_training_info['epoch'], model_training_info['val_loss'], color = colors[0])
     axes[1].set_xlabel('Epoch', fontsize=style_params['label_fontsize'])
-    axes[1].set_ylabel('Learning Rate', fontsize=style_params['label_fontsize'])
+    axes[1].set_ylabel('Validation Loss (MSE)', fontsize=style_params['label_fontsize'])
     axes[1].grid(True, alpha=0.3, linestyle='--')
     axes[1].set_yscale('log')
     axes[1].spines['top'].set_visible(False)
     axes[1].spines['right'].set_visible(False)
+
+
+
+    axes[2].plot(model_training_info['epoch'], model_training_info['lr'], color = colors[1])
+    axes[2].set_xlabel('Epoch', fontsize=style_params['label_fontsize'])
+    axes[2].set_ylabel('Learning Rate', fontsize=style_params['label_fontsize'])
+    axes[2].grid(True, alpha=0.3, linestyle='--')
+    axes[2].set_yscale('log')
+    axes[2].spines['top'].set_visible(False)
+    axes[2].spines['right'].set_visible(False)
 
     # Adjust layout and save
     plt.tight_layout()

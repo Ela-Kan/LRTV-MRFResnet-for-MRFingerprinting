@@ -55,7 +55,7 @@ def main():
     opt = {}
     opt["svd"] = 10
     dictionaryId = 'McGivneyFISP'
-    training_data_folder = 'Dictionaries/Dictionary'+dictionaryId
+    training_data_folder = '/Users/ela/Documents/PhD/code/MRFSGRE_BBB/Dictionaries/Dictionary'+dictionaryId
     opt["foldername"] = training_data_folder
     train_x, train_y, nn = prepare_data(opt)
 
@@ -178,12 +178,14 @@ def main():
         'tr_mu': nn['tr_mu'].tolist(),
         'normD': nn['normD'].tolist(),
         'encoder_training_info': {
-            'loss': encoder_training_info['loss'],
+            'train_loss': encoder_training_info['train_loss'],
+            'val_loss': encoder_training_info['val_loss'],
             'epoch': encoder_training_info['epoch'],
             'lr': encoder_training_info['lr']
         },
         'decoder_training_info': {
-            'loss': decoder_training_info['loss'],
+            'train_loss': decoder_training_info['train_loss'],
+            'val_loss': decoder_training_info['val_loss'],
             'epoch': decoder_training_info['epoch'],
             'lr': decoder_training_info['lr']
         },
