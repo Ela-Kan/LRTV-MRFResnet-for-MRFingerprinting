@@ -1,5 +1,7 @@
 # LRTV-MRFResnet 
 
+Ela Kanani: I have updated the encoder-decoder so that it works in Python.
+
 This toolbox provides codes for solving Magnetic Resonance Fingerprinting (MRF) problems 
 without dictionary matching through a spatiotemporally-regularised convex reconstruction and
 neural quantitative inference according to the paper:
